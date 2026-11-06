@@ -8,7 +8,7 @@
 ; NOTE: never change AppId. Windows uses it to recognise upgrades/uninstalls.
 
 #ifndef AppVersion
-  #define AppVersion "1.2.1"
+  #define AppVersion "1.3.0"
 #endif
 #define AppName      "Macra Downloader"
 #define AppPublisher "Macra Systems"

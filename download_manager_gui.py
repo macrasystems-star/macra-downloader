@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Graphical Download Manager -- Windows-styled desktop app (PySide6/Qt).
+"""Macra Downloader -- desktop download manager app (PySide6/Qt).
 
-A Windows-like main window with a URL entry field, save-folder picker,
+A classic desktop main window with a URL entry field, save-folder picker,
 selectable parallel-connection count (default 32), an "Add Download" button,
 and a table of downloads (name, live progress bar, transfer rate, total size,
 estimated time left, status). Downloads execute in background worker threads
@@ -44,9 +44,9 @@ from download_store import DownloadStore, RESUMABLE
 
 #: Public product identity (single place to rename the app).
 APP_NAME = 'Macra Downloader'
-APP_VERSION = '1.2.1'
+APP_VERSION = '1.3.0'
 APP_PUBLISHER = 'Macra Systems'
-APP_HOMEPAGE = ''  # set to the project website once it is live
+APP_HOMEPAGE = 'https://macrasystems.com/downloader/'
 
 #: Characters Windows forbids in file names (also unsafe on most filesystems).
 _UNSAFE_NAME = re.compile(r'[\\/:*?"<>|\x00-\x1f]+')
@@ -388,7 +388,7 @@ class DownloadItem:
 
 
 # ---------------------------------------------------------------------------
-# Main window - a Windows-like download manager.
+# Main window of the download manager.
 # ---------------------------------------------------------------------------
 class DownloadWindow(QMainWindow):
     WINDOWS_BLUE = '#0078d7'
@@ -525,7 +525,7 @@ class DownloadWindow(QMainWindow):
         self.statusBar()
 
     def _apply_style(self):
-        # A dark desktop style: follow it, built from that theme's own colours. Otherwise the Windows-like light look.
+        # A dark desktop style: follow it, built from that theme's own colours. Otherwise the built-in light look.
         colours = _theme_colours()
         self._scheme = _dark_scheme(colours) if colours and _luma(colours['theme_bg_color']) < 0.4 else None
         s = self._scheme
@@ -777,6 +777,8 @@ class DownloadWindow(QMainWindow):
                               total=item.downloaded, downloaded=item.downloaded)
         self._refresh(item)
         self.statusBar().showMessage(f'Finished: {name}', 5000)
+        if _open_in_package_installer(item.file_path):
+            self.statusBar().showMessage(f'Finished: {name}. Opening the installer...', 8000)
 
     def _on_failed(self, item, reason, name):
         # A pause arrives via the dedicated paused signal; anything landing
@@ -1185,6 +1187,24 @@ for name in ("theme_bg_color", "theme_fg_color", "theme_base_color", "theme_text
         out[name] = "#%02x%02x%02x" % (round(c.red * 255), round(c.green * 255), round(c.blue * 255))
 print(json.dumps(out))
 '''
+
+
+def _open_in_package_installer(path):
+    """On MacraOS, open a downloaded .deb package in MacraOS Software, which shows what it is and
+    installs it only when the user presses Install and enters their password. Returns True if opened."""
+    import subprocess
+    import sys
+    if not (sys.platform.startswith('linux') and str(path).lower().endswith('.deb')):
+        return False
+    installer = shutil.which('macraos-software')
+    if not installer or not os.path.isfile(path):
+        return False
+    try:
+        subprocess.Popen([installer, str(path)], start_new_session=True,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        return False
+    return True
 
 
 def _theme_colours():
