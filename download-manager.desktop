@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Macra Downloader
+Comment=Multi-threaded download manager (HTTP, YouTube, torrents)
+Exec=download-manager %U
+TryExec=download-manager
+Icon=download-manager
+Terminal=false
+Categories=Network;FileTransfer;Utility;
+StartupWMClass=Macra Downloader
+MimeType=application/x-bittorrent;x-scheme-handler/magnet;
+Actions=AddUrl;
+
+[Desktop Action AddUrl]
+Name=Add Download URL
+Exec=download-manager %U

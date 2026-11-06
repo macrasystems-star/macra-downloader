@@ -1,0 +1,5 @@
+requests>=2.25
+tqdm>=4.60
+PySide6-Essentials>=6.5
+yt-dlp>=2025.1.0
+libtorrent>=2.0.10

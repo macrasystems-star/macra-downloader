@@ -1,0 +1,26 @@
+MACRA DOWNLOADER - ACCEPTABLE USE
+
+Macra Downloader is a general-purpose tool for downloading files over
+HTTP(S), from video websites (via yt-dlp) and over BitTorrent (via libtorrent).
+
+By installing or using this software you agree that:
+
+1. You will only download content that you own, that is in the public domain
+   or released under a free licence, or that you otherwise have the right or
+   permission to download.
+
+2. You are solely responsible for complying with copyright law and all other
+   laws that apply to you, and with the terms of service of any website or
+   service you download from. Some websites (including some video platforms)
+   do not permit downloading in their terms of service.
+
+3. Macra Downloader does not bypass, remove or circumvent DRM, encryption or
+   any other technical copy-protection measure, and must not be used or
+   modified to do so.
+
+4. Macra Systems does not host, index, provide or endorse any content you
+   download, and is not responsible for how you use this software.
+
+The software is provided "as is", without warranty of any kind. See LICENSE
+for the full MIT licence terms and THIRD_PARTY_NOTICES.md for the licences of
+the open-source components it includes.

@@ -1,0 +1,124 @@
+# Builds Macra Downloader for Windows (installer) and Linux (single binary)
+# and publishes them as a GitHub Release.
+#
+#   git tag v1.2.1 && git push origin v1.2.1     -> builds + publishes release
+#   Actions tab -> "Release" -> Run workflow      -> test build only (no release)
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'   # libtorrent publishes Windows wheels for 3.12
+
+      - name: Read app version
+        id: ver
+        shell: bash
+        run: |
+          v=$(sed -n "s/^APP_VERSION = '\(.*\)'/\1/p" download_manager_gui.py)
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "v$v" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match APP_VERSION $v"; exit 1
+          fi
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Check torrent support
+        run: python -c "import libtorrent; print('libtorrent', libtorrent.__version__)"
+
+      - name: Run tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m unittest test_download_manager test_gui_signals -v
+
+      - name: Build app (PyInstaller)
+        run: pyinstaller --noconfirm --clean packaging\windows\macra-downloader.spec
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --no-progress -y
+          }
+
+      - name: Build installer (Inno Setup)
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppVersion=${{ steps.ver.outputs.version }}" packaging\windows\installer.iss
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: Output/MacraDownloader-Setup-x64.exe
+          if-no-files-found: error
+
+  linux:
+    runs-on: ubuntu-22.04   # older glibc, so the binary runs on more distros
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y libxcb-cursor0 libegl1
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Run tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m unittest test_download_manager test_gui_signals -v
+
+      - name: Build app (PyInstaller)
+        run: |
+          pyinstaller --noconfirm --clean download-manager.spec
+          mv dist/download-manager dist/macra-downloader-linux-x64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/macra-downloader-linux-x64
+          if-no-files-found: error
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: out
+        run: sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Macra Downloader ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            out/MacraDownloader-Setup-x64.exe
+            out/macra-downloader-linux-x64
+            out/SHA256SUMS.txt

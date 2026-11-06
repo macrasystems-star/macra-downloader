@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Macra Downloader: free download manager for Windows &amp; Linux</title>
+<meta name="description" content="Macra Downloader is a free, open-source, multi-connection download manager for Windows and Linux with pause/resume, video-site and torrent support.">
+<link rel="icon" type="image/png" href="favicon-32.png">
+<link rel="apple-touch-icon" href="icon-256.png">
+<meta property="og:title" content="Macra Downloader">
+<meta property="og:description" content="Free, open-source download manager for Windows and Linux.">
+<meta property="og:image" content="icon-256.png">
+<style>
+  :root {
+    --bg: #f6f8fb; --surface: #ffffff; --text: #14202e; --muted: #556275;
+    --border: #dde3ec; --accent: #0b63d6; --accent-hover: #0a52b0; --accent-fg: #fff;
+    --warn-bg: #fff7e6; --warn-border: #f0c36d; --code-bg: #eef2f7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f141b; --surface: #161d27; --text: #e7edf5; --muted: #9aa8bb;
+      --border: #263142; --accent: #3d8bff; --accent-hover: #6aa6ff; --accent-fg: #06101f;
+      --warn-bg: #2a2212; --warn-border: #7a5a1d; --code-bg: #1d2633;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+  header.top { border-bottom: 1px solid var(--border); background: var(--surface); }
+  header.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; text-decoration: none; color: var(--text); }
+  .brand img { width: 30px; height: 30px; }
+  nav a { color: var(--muted); text-decoration: none; margin-left: 18px; font-size: 15px; }
+  nav a:hover { color: var(--text); }
+  @media (max-width: 560px) { nav a.opt { display: none; } }
+
+  .hero { padding: 64px 0 40px; text-align: center; }
+  .hero img { width: 96px; height: 96px; }
+  .hero h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.15; margin: 18px 0 12px; letter-spacing: -0.02em; }
+  .hero p.lead { font-size: 19px; color: var(--muted); max-width: 640px; margin: 0 auto 28px; }
+  .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 8px;
+    font-weight: 600; text-decoration: none; border: 1px solid var(--border); color: var(--text); background: var(--surface);
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn svg { width: 18px; height: 18px; }
+  .small { font-size: 14px; color: var(--muted); }
+
+  section { padding: 44px 0; }
+  h2 { font-size: 28px; margin: 0 0 20px; letter-spacing: -0.01em; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .card h3 { margin: 0 0 6px; font-size: 17px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  .dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .dl .card h3 { font-size: 20px; }
+  .dl .card .btn { margin: 14px 0 10px; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; }
+  code { background: var(--code-bg); padding: 1px 6px; border-radius: 4px; }
+  pre { background: var(--code-bg); padding: 12px 14px; border-radius: 8px; overflow-x: auto; margin: 8px 0 0; }
+
+  .notice { background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 12px; padding: 20px 22px; }
+  .notice h2 { font-size: 22px; margin-bottom: 10px; }
+  .notice ul { margin: 0; padding-left: 20px; }
+  .notice li { margin: 4px 0; }
+
+  details { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { color: var(--muted); margin: 10px 0 0; }
+
+  footer { border-top: 1px solid var(--border); padding: 28px 0 40px; color: var(--muted); font-size: 14px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#"><img src="icon-256.png" alt="">Macra Downloader</a>
+    <nav>
+      <a class="opt" href="#features">Features</a>
+      <a href="#download">Download</a>
+      <a class="opt" href="#faq">FAQ</a>
+      <a href="https://github.com/__REPO__">Source</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <img src="icon-256.png" alt="Macra Downloader icon">
+    <h1>Fast, free downloads.<br>No ads, no catch.</h1>
+    <p class="lead">Macra Downloader splits each file into up to 32 parallel connections,
+      resumes interrupted downloads automatically, and also handles video sites and torrents.
+      Free and open source for Windows and Linux.</p>
+    <div class="btns">
+      <a class="btn primary" href="https://github.com/__REPO__/releases/latest/download/MacraDownloader-Setup-x64.exe">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.5 10 4.5v7H3zm8-1.2L21 3v8.5H11zM3 12.5h7v7L3 18.5zm8 0h10V21l-10-1.4z"/></svg>
+        Download for Windows
+      </a>
+      <a class="btn" href="#download">Linux &amp; other options</a>
+    </div>
+    <p class="small" style="margin-top:14px">Windows 10/11 64-bit · MIT License · <a href="https://github.com/__REPO__/releases/latest">Release notes</a></p>
+  </div>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>What it does</h2>
+      <div class="grid">
+        <div class="card"><h3>Multi-connection speed</h3><p>Splits each download into 1–32 parallel HTTP range requests to make full use of your bandwidth.</p></div>
+        <div class="card"><h3>Pause &amp; auto-resume</h3><p>Every download is saved. Close the app or lose power, and it picks up where it left off on the next launch.</p></div>
+        <div class="card"><h3>Video sites</h3><p>Paste a link from one of ~1000 supported video sites (via yt-dlp) and get a single file with a live progress bar.</p></div>
+        <div class="card"><h3>Torrents &amp; magnets</h3><p>Open magnet links and .torrent files directly, with the same speed and ETA display as normal downloads.</p></div>
+        <div class="card"><h3>Clipboard capture</h3><p>Copy a link anywhere and the download starts on its own. You can switch this off with one checkbox.</p></div>
+        <div class="card"><h3>Private by design</h3><p>No accounts, telemetry or ads. Your download history stays in a local file on your PC.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <h2>Download</h2>
+      <div class="dl">
+        <div class="card">
+          <h3>Windows</h3>
+          <p>Installer for Windows 10 and 11 (64-bit). It adds a Start-menu shortcut and an uninstaller, and doesn't need administrator rights.</p>
+          <a class="btn primary" href="https://github.com/__REPO__/releases/latest/download/MacraDownloader-Setup-x64.exe">MacraDownloader-Setup-x64.exe</a>
+          <p class="small"><b>"Windows protected your PC"?</b> This appears for new apps that aren't code-signed yet.
+            Click <b>More info → Run anyway</b>. If you want to check the file, compare it with
+            <a href="https://github.com/__REPO__/releases/latest/download/SHA256SUMS.txt">SHA256SUMS.txt</a>:</p>
+          <pre>Get-FileHash .\MacraDownloader-Setup-x64.exe</pre>
+        </div>
+        <div class="card">
+          <h3>Linux</h3>
+          <p>A single self-contained executable for x86-64 distributions (Ubuntu 22.04+, Mint, Debian, Fedora…).</p>
+          <a class="btn" href="https://github.com/__REPO__/releases/latest/download/macra-downloader-linux-x64">macra-downloader-linux-x64</a>
+          <p class="small">Make it executable, then run it:</p>
+          <pre>chmod +x macra-downloader-linux-x64
+./macra-downloader-linux-x64</pre>
+          <p class="small" style="margin-top:10px">Or install from source: see the <a href="https://github.com/__REPO__#install-it-linux-mint--ubuntu">README</a>.</p>
+        </div>
+      </div>
+      <p class="small" style="margin-top:16px">Optional: install <b>FFmpeg</b> (<code>winget install ffmpeg</code> / <code>sudo apt install ffmpeg</code>)
+        to get the highest-quality video downloads. Without it the app picks the best single-file format.</p>
+    </div>
+  </section>
+
+  <section id="responsible">
+    <div class="wrap">
+      <div class="notice">
+        <h2>Use it responsibly</h2>
+        <ul>
+          <li>Only download content you own, that is public domain or freely licensed, or that you otherwise have permission to download.</li>
+          <li>You are responsible for following copyright law and the terms of service of the websites you use. Some sites don't allow downloading.</li>
+          <li>Macra Downloader does <b>not</b> bypass DRM or any other copy protection.</li>
+          <li>Macra Systems does not host, index or provide any content.</li>
+        </ul>
+        <p class="small" style="margin:12px 0 0">Full text: <a href="https://github.com/__REPO__/blob/main/DISCLAIMER.txt">acceptable-use notice</a>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>FAQ</h2>
+      <details><summary>Is it really free?</summary>
+        <p>Yes. It's open-source software under the MIT License, with no ads, trials or paid tiers. You can read, change and share the source code.</p></details>
+      <details><summary>Why does Windows or my antivirus warn me?</summary>
+        <p>New programs that aren't signed with a paid code-signing certificate get a SmartScreen warning until enough people have downloaded them. The installer is built automatically and in public by GitHub from the published source code, and each release lists SHA-256 checksums so you can verify your copy.</p></details>
+      <details><summary>Where is my download history stored?</summary>
+        <p>On Windows: <code>%LOCALAPPDATA%\MacraDownloader\downloads.db</code>. On Linux: <code>~/.local/share/download_manager/downloads.db</code>. Nothing is sent anywhere.</p></details>
+      <details><summary>Can it open magnet links from my browser?</summary>
+        <p>Yes. On Windows, tick "Open magnet: links" during installation. On Linux, <code>install.sh</code> registers the handler.</p></details>
+      <details><summary>How do I uninstall it?</summary>
+        <p>Windows: Settings → Apps → Macra Downloader → Uninstall. Linux: delete the file, or run <code>uninstall.sh</code> if you used the installer script.</p></details>
+      <details><summary>I found a bug / have an idea</summary>
+        <p>Please open an issue on <a href="https://github.com/__REPO__/issues">GitHub</a>.</p></details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Macra Systems · <a href="https://github.com/__REPO__/blob/main/LICENSE">MIT License</a> ·
+      <a href="https://github.com/__REPO__/blob/main/THIRD_PARTY_NOTICES.md">Third-party notices</a></span>
+    <span>Not affiliated with Microsoft, Google/YouTube or any website it can download from.</span>
+  </div>
+</footer>
+
+</body>
+</html>

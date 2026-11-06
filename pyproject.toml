@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "download-manager"
+version = "1.2.1"
+description = "Macra Downloader: free multi-threaded download manager (HTTP, video sites, torrents)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Macra Systems" }]
+dependencies = [
+  "requests>=2.25",
+  "tqdm>=4.60",
+  "PySide6-Essentials>=6.5",
+  "yt-dlp>=2025.1.0",
+  "libtorrent>=2.0.10",
+]
+
+[project.optional-dependencies]
+torrent = ["libtorrent>=2.0.10"]
+all = ["libtorrent>=2.0.10"]
+
+[project.scripts]
+download-manager = "download_manager_gui:main"
+
+[tool.setuptools]
+py-modules = ["download_manager", "download_manager_gui",
+              "media_downloader", "torrent_downloader", "download_store"]
+
