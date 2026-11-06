@@ -1107,7 +1107,9 @@ class DownloadWindow(QMainWindow):
             'does not bypass DRM or other copy protection.</p>'
             '<p>Built with Qt / PySide6 (LGPLv3), yt-dlp (Unlicense), '
             'libtorrent (BSD), requests (Apache 2.0) and tqdm (MIT/MPL-2.0). '
-            'See THIRD_PARTY_NOTICES for details.</p>'))
+            'See THIRD_PARTY_NOTICES for details.</p>'
+            '<p><b>Privacy:</b> the app collects no personal data and sends '
+            'nothing to Macra Systems. See PRIVACY.md for details.</p>'))
 
     def closeEvent(self, event):
         # Mark anything still downloading as interrupted (not lost): it will

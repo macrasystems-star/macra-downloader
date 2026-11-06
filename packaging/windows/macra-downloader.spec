@@ -19,6 +19,7 @@ datas = [
     (os.path.join(ROOT, 'LICENSE'), '.'),
     (os.path.join(ROOT, 'THIRD_PARTY_NOTICES.md'), '.'),
     (os.path.join(ROOT, 'DISCLAIMER.txt'), '.'),
+    (os.path.join(ROOT, 'PRIVACY.md'), '.'),
 ]
 binaries = []
 hiddenimports = ['download_manager', 'media_downloader',

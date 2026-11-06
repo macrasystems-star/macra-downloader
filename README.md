@@ -154,3 +154,9 @@ Macra Downloader is © 2026 Macra Systems and released under the
 [MIT License](LICENSE). It bundles open-source components under their own
 licences (Qt/PySide6 under LGPL-3.0, yt-dlp, libtorrent, requests, and others).
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Privacy
+
+The app collects no personal data and sends nothing to Macra Systems. Torrent
+downloads make your IP address visible to other peers, as with any BitTorrent
+program. See [PRIVACY.md](PRIVACY.md).

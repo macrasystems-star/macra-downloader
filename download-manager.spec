@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_all
 
 datas = [('assets/icon-256.png', 'assets'), ('LICENSE', '.'),
-         ('THIRD_PARTY_NOTICES.md', '.'), ('DISCLAIMER.txt', '.')]
+         ('THIRD_PARTY_NOTICES.md', '.'), ('DISCLAIMER.txt', '.'), ('PRIVACY.md', '.')]
 binaries = []
 hiddenimports = ['download_manager', 'media_downloader',
                  'torrent_downloader', 'download_store']
