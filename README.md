@@ -1,24 +1,73 @@
-# Macra Downloader
+<p align="center">
+  <img src="assets/icon-256.png" alt="Macra Downloader icon" width="128">
+</p>
 
-A free, open-source graphical download manager for **Windows and Linux** by
-Macra Systems, built on **Python 3 + PySide6 (Qt 6)**.
-It multi‑threads each download with HTTP Range requests, shows a live per‑download progress
-bar (with speed and ETA) in a Windows‑look task‑style window, and writes the final file to a
-folder you choose. It also downloads **YouTube** (and ~1000 other sites) via `yt‑dlp`
-and **torrents/magnets** via `libtorrent`.
+<h1 align="center">Macra Downloader</h1>
+
+<p align="center">
+  <b>Fast, free downloads. No ads, no catch.</b><br>
+  A free, open-source download manager for Windows and Linux that is much faster
+  than your browser's built-in downloader.
+</p>
+
+<p align="center">
+  <a href="https://github.com/macrasystems-star/macra-downloader/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/macrasystems-star/macra-downloader"></a>
+  <img alt="Platforms: Windows and Linux" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-blue">
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/macrasystems-star/macra-downloader"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/macrasystems-star/macra-downloader/releases/latest/download/MacraDownloader-Setup-x64.exe"><b>⬇ Download for Windows</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/macrasystems-star/macra-downloader/releases/latest/download/macra-downloader-linux-x64"><b>⬇ Download for Linux</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://macrasystems-star.github.io/macra-downloader/">Website</a>
+</p>
+
+<p align="center">
+  <img src="assets/screenshot.png" alt="Macra Downloader downloading Linux ISOs with live progress, speed and time remaining" width="880">
+</p>
+
+## Why Macra Downloader?
+
+Browser downloads are slow and fragile. They pull a file over a single
+connection, and if your Wi-Fi drops or the browser closes, you often have to
+start again from zero. We got tired of that, so we built Macra Downloader and
+made it free for everyone.
+
+- **Much faster downloads.** Each file is split into up to **32 parallel
+  connections**, so you use your full internet speed.
+- **Never start over.** Interrupted downloads resume automatically, even after
+  a crash, a reboot or days later.
+- **Videos and torrents too.** Download from YouTube and about 1,000 other video
+  sites, and open magnet links and `.torrent` files, all in the same app.
+- **Hands-free.** Copy a link anywhere and the download starts on its own.
+- **Clear progress.** A live progress bar with speed and time remaining for every
+  download.
+- **Free and private.** No ads, no account, no tracking. Open source under the
+  MIT License.
 
 ## Download
 
-Get the latest version from the project's **Releases** page:
+| System | File | Notes |
+|---|---|---|
+| **Windows 10/11 (64-bit)** | [MacraDownloader-Setup-x64.exe](https://github.com/macrasystems-star/macra-downloader/releases/latest/download/MacraDownloader-Setup-x64.exe) | Normal installer with Start-menu shortcut and uninstaller |
+| **Linux (x86-64)** | [macra-downloader-linux-x64](https://github.com/macrasystems-star/macra-downloader/releases/latest/download/macra-downloader-linux-x64) | Single self-contained file, no Python needed (`chmod +x` then run it) |
 
-- **Windows 10/11 (64-bit):** `MacraDownloader-Setup-x64.exe`, a normal installer
-  with Start-menu shortcut and uninstaller.
-- **Linux (x86-64):** `macra-downloader-linux-x64`, a single self-contained
-  executable that needs no Python install.
+All versions are on the [Releases page](https://github.com/macrasystems-star/macra-downloader/releases).
 
 > **Windows SmartScreen:** the installer is not code-signed yet, so Windows may
 > show *"Windows protected your PC"*. Click **More info → Run anyway**. You can
 > check the download against the `SHA256SUMS.txt` file published with each release.
+
+## How to use it
+
+1. Paste a link into the **URL** box (or just copy one, and the app picks it up).
+2. Choose where to save it.
+3. Press **Add Download**.
+
+That's it. Plain files, video pages, magnet links and `.torrent` files all go
+in the same box, and the app works out what to do with each.
 
 ## ⚠ Use responsibly
 
@@ -29,7 +78,11 @@ websites you use. Some sites, including some video platforms, do not allow downl
 in their terms. The app does **not** bypass DRM or any other copy protection.
 See [DISCLAIMER.txt](DISCLAIMER.txt).
 
-## Quick start
+---
+
+# For developers
+
+## Run from source
 
 ```bash
 # Run it (double‑click in your file manager, or from a terminal):
