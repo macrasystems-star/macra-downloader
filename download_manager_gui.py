@@ -29,7 +29,9 @@ import time
 from collections import deque
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QTimer, Signal, Qt, QUrl
+from PySide6.QtCore import (
+    QObject, QProcess, QProcessEnvironment, QTimer, Signal, Qt, QUrl,
+)
 from PySide6.QtGui import QAction, QDesktopServices, QKeySequence
 from PySide6.QtWidgets import (
     QApplication, QCheckBox, QFileDialog, QGridLayout, QLabel, QLineEdit,
@@ -44,7 +46,7 @@ from download_store import DownloadStore, RESUMABLE
 
 #: Public product identity (single place to rename the app).
 APP_NAME = 'Macra Downloader'
-APP_VERSION = '1.3.0'
+APP_VERSION = '1.4.0'
 APP_PUBLISHER = 'Macra Systems'
 APP_HOMEPAGE = 'https://macrasystems.com/downloader/'
 
@@ -954,7 +956,8 @@ class DownloadWindow(QMainWindow):
             delete_file = menu.addAction('Delete File')
         menu.addSeparator()
         remove_act = menu.addAction('Remove Download')
-        open_folder = menu.addAction('Open Folder')
+        has_file = item.file_path is not None and item.file_path.exists()
+        open_folder = menu.addAction('Show in Folder' if has_file else 'Open Folder')
         chosen = menu.exec_(self.table.viewport().mapToGlobal(pos))
         if chosen is None:
             return
@@ -981,7 +984,7 @@ class DownloadWindow(QMainWindow):
         elif chosen is remove_act:
             self._remove_download(item)
         elif chosen is open_folder:
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(item.dest)))
+            _show_in_folder(item.file_path if has_file else None, item.dest, self)
 
     def _remove_download(self, item):
         """Stop the download (if active) and remove it completely.
@@ -1187,6 +1190,61 @@ for name in ("theme_bg_color", "theme_fg_color", "theme_base_color", "theme_text
         out[name] = "#%02x%02x%02x" % (round(c.red * 255), round(c.green * 255), round(c.blue * 255))
 print(json.dumps(out))
 '''
+
+
+def _show_in_folder(path, folder, parent=None):
+    """Open `folder` in the file manager with `path` highlighted; only open it when `path` is None or
+    the file manager cannot highlight a file."""
+    import subprocess
+    import sys
+
+    def open_folder():
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+
+    if path is None:
+        open_folder()
+        return
+    path = Path(path).absolute()
+    if sys.platform.startswith('win'):
+        try:
+            # One string: Explorer wants /select,"C:\\path" and not a quoted whole argument.
+            subprocess.Popen(f'explorer /select,"{path}"')
+        except OSError:
+            open_folder()
+        return
+    if sys.platform == 'darwin':
+        program, args = 'open', ['-R', str(path)]
+    else:
+        # The freedesktop file manager interface (Thunar, Nautilus, Dolphin, Nemo...). as_uri()
+        # percent-encodes quotes, so the URI cannot break out of the GVariant text.
+        program = 'gdbus'
+        args = ['call', '--session', '--timeout', '10',
+                '--dest', 'org.freedesktop.FileManager1',
+                '--object-path', '/org/freedesktop/FileManager1',
+                '--method', 'org.freedesktop.FileManager1.ShowItems', f"['{path.as_uri()}']", '']
+    proc = QProcess(parent)
+    if getattr(sys, 'frozen', False):
+        # A PyInstaller build must not hand its own libraries to a system program.
+        env = QProcessEnvironment.systemEnvironment()
+        original = env.value('LD_LIBRARY_PATH_ORIG')
+        env.remove('LD_LIBRARY_PATH')
+        if original:
+            env.insert('LD_LIBRARY_PATH', original)
+        proc.setProcessEnvironment(env)
+
+    def finished(code, _status):
+        if code != 0:
+            open_folder()
+        proc.deleteLater()
+
+    def error(err):
+        if err == QProcess.ProcessError.FailedToStart:  # finished is not sent in this case
+            open_folder()
+            proc.deleteLater()
+
+    proc.finished.connect(finished)
+    proc.errorOccurred.connect(error)
+    proc.start(program, args)
 
 
 def _open_in_package_installer(path):
