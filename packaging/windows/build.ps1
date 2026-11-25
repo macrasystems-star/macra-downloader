@@ -18,7 +18,7 @@ py -3.12 -m venv .venv-win
 .\.venv-win\Scripts\pip install -r requirements.txt pyinstaller
 
 Write-Host '==> Running tests'
-.\.venv-win\Scripts\python -m unittest test_download_manager
+.\.venv-win\Scripts\python -m unittest test_download_manager test_browser_integration
 
 Write-Host '==> PyInstaller'
 .\.venv-win\Scripts\pyinstaller --noconfirm --clean packaging\windows\macra-downloader.spec

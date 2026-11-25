@@ -118,9 +118,31 @@ def combine_parts(part_files, output_path: Path):
             pass
 
 
+def make_session(headers=None, cookies=None) -> requests.Session:
+    """A requests session carrying a browser's headers and cookies.
+
+    *headers*: e.g. {'Referer': ..., 'User-Agent': ...}.
+    *cookies*: [{'name', 'value', 'domain', 'path', 'secure'}] as browsers
+    report them. They go into the cookie jar with their domain, so requests
+    only sends each cookie to its own site (not to a server a redirect leads to).
+    """
+    session = requests.Session()
+    for key, value in (headers or {}).items():
+        if value:
+            session.headers[key] = value
+    for c in cookies or []:
+        try:
+            session.cookies.set_cookie(requests.cookies.create_cookie(
+                c['name'], c['value'], domain=c['domain'],
+                path=c.get('path') or '/', secure=bool(c.get('secure'))))
+        except (KeyError, TypeError, ValueError):
+            pass
+    return session
+
+
 def download_file(url: str, output_path, connections: int = 32,
                   show_progress: bool = True, progress_callback=None,
-                  cancel_check=None) -> Path:
+                  cancel_check=None, headers=None, cookies=None) -> Path:
     """Download `url` into `output_path` using up to `connections` pieces.
 
     Returns the resulting Path. Raises RuntimeError on download failure and
@@ -129,11 +151,12 @@ def download_file(url: str, output_path, connections: int = 32,
     If `progress_callback` is supplied it is invoked with the number of
     bytes written since the last call (thread-safe; may be called from
     multiple worker threads).
+    *headers* / *cookies*: see make_session() (downloads handed over by a browser).
     """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    session = requests.Session()
+    session = make_session(headers, cookies)
     try:
         total_size = get_file_size(url, session)
     except Exception as e:

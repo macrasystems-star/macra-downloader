@@ -8,7 +8,7 @@
 ; NOTE: never change AppId. Windows uses it to recognise upgrades/uninstalls.
 
 #ifndef AppVersion
-  #define AppVersion "1.4.0"
+  #define AppVersion "1.5.0"
 #endif
 #define AppName      "Macra Downloader"
 #define AppPublisher "Macra Systems"
@@ -59,6 +59,9 @@ Source: "{#Root}\LICENSE"; DestDir: "{app}"; DestName: "LICENSE.txt"; Flags: ign
 Source: "{#Root}\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; DestName: "THIRD_PARTY_NOTICES.txt"; Flags: ignoreversion
 Source: "{#Root}\DISCLAIMER.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\PRIVACY.md"; DestDir: "{app}"; DestName: "PRIVACY.txt"; Flags: ignoreversion
+; Browser helper manifests (their "path" is relative: MacraDownloaderHost.exe in this folder)
+Source: "com.macrasystems.downloader.chrome.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "com.macrasystems.downloader.firefox.json"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"
@@ -75,6 +78,13 @@ Root: HKA; Subkey: "Software\Classes\.torrent"; ValueType: string; ValueData: "M
 Root: HKA; Subkey: "Software\Classes\MacraDownloader.torrent"; ValueType: string; ValueData: "BitTorrent file"; Flags: uninsdeletekey; Tasks: torrent
 Root: HKA; Subkey: "Software\Classes\MacraDownloader.torrent\DefaultIcon"; ValueType: string; ValueData: """{app}\{#AppExe}"",0"; Tasks: torrent
 Root: HKA; Subkey: "Software\Classes\MacraDownloader.torrent\shell\open\command"; ValueType: string; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: torrent
+; Browser integration: lets the Macra Downloader extension in Chrome, Edge, Brave,
+; Chromium and Firefox start the helper (HKA = this user, or all users).
+Root: HKA; Subkey: "Software\Google\Chrome\NativeMessagingHosts\com.macrasystems.downloader"; ValueType: string; ValueData: "{app}\com.macrasystems.downloader.chrome.json"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Microsoft\Edge\NativeMessagingHosts\com.macrasystems.downloader"; ValueType: string; ValueData: "{app}\com.macrasystems.downloader.chrome.json"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\BraveSoftware\Brave-Browser\NativeMessagingHosts\com.macrasystems.downloader"; ValueType: string; ValueData: "{app}\com.macrasystems.downloader.chrome.json"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Chromium\NativeMessagingHosts\com.macrasystems.downloader"; ValueType: string; ValueData: "{app}\com.macrasystems.downloader.chrome.json"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Mozilla\NativeMessagingHosts\com.macrasystems.downloader"; ValueType: string; ValueData: "{app}\com.macrasystems.downloader.firefox.json"; Flags: uninsdeletekey
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent

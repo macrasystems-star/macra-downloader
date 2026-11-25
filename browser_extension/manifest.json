@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Macra Downloader",
+  "short_name": "Macra Downloader",
+  "version": "1.5.0",
+  "description": "Sends your downloads to Macra Downloader: faster multi-connection downloads that can resume.",
+  "homepage_url": "https://macrasystems.com/downloader/",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyuYBfitIENep3XQnfLe6SMw9dpxzcaAbODeA5mfApsRrroLdfwWfWSpu+Mywh96NGmWL/OLIBdk3iqUxYBxY3t06IlhokfUFk/DYjOrRdaFY0t26HuvDRLJTAJjFxmSf9xBwOuUCMvHT25KZYsiSISeRQUH+LVPGMeC8PBNe4ZhLXiGxt3fiZVIY0nHEaYolWkA1JYHLvyMrV9P+iUbklCXhtrfNR21HEjLvtUKjPg9QdDXegYXQGY3AKlZCLIZfzW4E0iKmIeoEcuWc/05XpNGZql5080pBiHr5hHu3jNBnEIZTeb9BQHgwlrfeG9ipWqoyBF4fJPVk5QrBJRx/WQIDAQAB",
+  "icons": {"16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png", "128": "icons/icon-128.png"},
+  "action": {
+    "default_title": "Macra Downloader is handling downloads (click to turn off)",
+    "default_icon": {"16": "icons/icon-16.png", "32": "icons/icon-32.png"}
+  },
+  "background": {
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
+  "permissions": ["downloads", "nativeMessaging", "cookies", "storage", "contextMenus"],
+  "host_permissions": ["<all_urls>"],
+  "minimum_chrome_version": "121",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "downloader@macrasystems.com",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {"required": ["none"]}
+    }
+  }
+}

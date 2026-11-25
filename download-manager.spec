@@ -5,7 +5,7 @@ datas = [('assets/icon-256.png', 'assets'), ('LICENSE', '.'),
          ('THIRD_PARTY_NOTICES.md', '.'), ('DISCLAIMER.txt', '.'), ('PRIVACY.md', '.')]
 binaries = []
 hiddenimports = ['download_manager', 'media_downloader',
-                 'torrent_downloader', 'download_store']
+                 'torrent_downloader', 'download_store', 'browser_handoff', 'browser_setup', 'update_check', 'native_host']
 tmp_ret = collect_all('yt_dlp')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 try:

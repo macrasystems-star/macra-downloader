@@ -21,6 +21,19 @@ This module is also the entry point packaged into the single-file
 executable built with PyInstaller.
 """
 
+import sys
+
+if __name__ == '__main__' and len(sys.argv) > 1:
+    # Started by a browser as its helper (Chrome passes the extension's origin,
+    # Firefox the manifest path), or by Macra Browser with a request on stdin.
+    # Handled before Qt is loaded so it starts fast.
+    if sys.argv[1].startswith('chrome-extension://') or sys.argv[1].endswith('.json'):
+        import native_host
+        sys.exit(native_host.main())
+    if sys.argv[1] == '--handoff':
+        import browser_handoff
+        sys.exit(browser_handoff.main())
+
 import os
 import re
 import shutil
@@ -39,16 +52,21 @@ from PySide6.QtWidgets import (
     QStatusBar, QStyleFactory, QTableWidget, QVBoxLayout, QWidget,
 )
 
-from download_manager import download_file
+from download_manager import download_file, make_session
+import browser_handoff
+import browser_setup
+import update_check
 import media_downloader
 import torrent_downloader
 from download_store import DownloadStore, RESUMABLE
 
 #: Public product identity (single place to rename the app).
 APP_NAME = 'Macra Downloader'
-APP_VERSION = '1.4.0'
+APP_VERSION = '1.5.0'
 APP_PUBLISHER = 'Macra Systems'
 APP_HOMEPAGE = 'https://macrasystems.com/downloader/'
+#: Where users get the browser extension (README section until it is in the browsers' stores).
+EXTENSION_PAGE = 'https://github.com/macrasystems-star/macra-downloader#browser-integration'
 
 #: Characters Windows forbids in file names (also unsafe on most filesystems).
 _UNSAFE_NAME = re.compile(r'[\\/:*?"<>|\x00-\x1f]+')
@@ -113,9 +131,11 @@ class DownloadWorker(QObject):
     failed = Signal(str, str)    # (reason, filename)
     paused = Signal()            # worker was paused/canceled by the user
 
-    def __init__(self, url, dest, filename, connections):
+    def __init__(self, url, dest, filename, connections, headers=None, cookies=None):
         super().__init__()
         self.url = url
+        self.headers = headers or {}     # from a browser hand-off (Referer, User-Agent)
+        self.cookies = cookies or []
         self.dest = Path(dest)
         self.filename = filename
         self.connections = connections
@@ -147,8 +167,7 @@ class DownloadWorker(QObject):
             return self._paused
 
     def _head_size(self):
-        import requests
-        with requests.Session() as s:
+        with make_session(self.headers, self.cookies) as s:
             h = s.head(self.url, allow_redirects=True, timeout=15)
             h.raise_for_status()
             cl = h.headers.get('Content-Length')
@@ -194,7 +213,8 @@ class DownloadWorker(QObject):
                 return
             download_file(self.url, output, connections=self.connections,
                           show_progress=False, progress_callback=self._progress,
-                          cancel_check=self._cancel_check)
+                          cancel_check=self._cancel_check,
+                          headers=self.headers, cookies=self.cookies)
             if not self._running:
                 self._emit_paused_or_canceled()
                 return
@@ -378,6 +398,9 @@ class DownloadItem:
         self.thread = None         # background thread running worker.run()
         self.db_id = None          # row id in the persistent download store
         self.file_path = None      # final combined file path once complete
+        self.headers = {}          # browser hand-off: Referer / User-Agent
+        self.cookies = []          # browser hand-off: kept in memory only, never in the database
+        self.update_sha256 = None  # an app update download: its expected checksum
         self.name_label = None
         self.bar = None
         self.speed_label = None
@@ -387,6 +410,13 @@ class DownloadItem:
         self._last_display = 0.0   # throttle for the Speed / ETA cells
         self._last_db_save = 0.0   # throttle for DB progress persistence
 
+
+
+class _Bridge(QObject):
+    """Carries results from background threads to the UI thread (queued signals)."""
+    handoff = Signal(object)           # a cleaned browser_handoff request
+    update_found = Signal(object, bool)  # (update_check.fetch_latest() result, manual check)
+    update_none = Signal(str)          # no update / error text (manual checks only)
 
 
 # ---------------------------------------------------------------------------
@@ -408,6 +438,19 @@ class DownloadWindow(QMainWindow):
         self._apply_style()
         self._restore_sessions()
         self._install_clipboard_monitor()
+        # Browsers (extension helper, Macra Browser, a second launch) hand downloads to this window.
+        self._bridge = _Bridge()
+        self._bridge.handoff.connect(self._on_handoff)
+        self._bridge.update_found.connect(self._on_update_found)
+        self._bridge.update_none.connect(self._on_update_none)
+        self._handoff = browser_handoff.HandoffServer(self._bridge.handoff.emit)
+        try:
+            self._handoff.start()
+        except OSError as exc:
+            self._handoff = None
+            print(f'{APP_NAME}: browser hand-off unavailable: {exc}', file=sys.stderr)
+        self._update_info = None
+        QTimer.singleShot(8000, lambda: self._check_updates(manual=False))
         # Accept a URL/magnet passed on the command line (browser hook /
         # .desktop file DropAction):  download-manager "magnet:?..." .
         try:
@@ -449,6 +492,18 @@ class DownloadWindow(QMainWindow):
         file_menu.addAction(exit_act)
 
         help_menu = menubar.addMenu('&Help')
+        browsers_act = QAction('&Browser Integration...', self)
+        browsers_act.triggered.connect(self._browser_integration)
+        help_menu.addAction(browsers_act)
+        check_act = QAction('Check for &Updates...', self)
+        check_act.triggered.connect(lambda: self._check_updates(manual=True))
+        help_menu.addAction(check_act)
+        self.auto_update_act = QAction('Check for Updates &Automatically', self)
+        self.auto_update_act.setCheckable(True)
+        self.auto_update_act.setChecked(update_check.load_settings().get('check_updates', True) is not False)
+        self.auto_update_act.toggled.connect(self._toggle_auto_update)
+        help_menu.addAction(self.auto_update_act)
+        help_menu.addSeparator()
         about_act = QAction('&About', self)
         about_act.triggered.connect(self._about)
         help_menu.addAction(about_act)
@@ -523,8 +578,14 @@ class DownloadWindow(QMainWindow):
         self.table.customContextMenuRequested.connect(self._table_menu)
         root.addWidget(self.table, 1)
 
-        # status bar
+        # status bar (+ a button that appears when an update is available)
         self.statusBar()
+        self.update_btn = QPushButton()
+        self.update_btn.setFlat(True)
+        self.update_btn.setCursor(Qt.PointingHandCursor)
+        self.update_btn.clicked.connect(self._offer_update)
+        self.update_btn.hide()
+        self.statusBar().addPermanentWidget(self.update_btn)
 
     def _apply_style(self):
         # A dark desktop style: follow it, built from that theme's own colours. Otherwise the built-in light look.
@@ -627,15 +688,20 @@ class DownloadWindow(QMainWindow):
         if self.isVisible():
             self._add_download()
 
-    def _add_download(self):
-        url = self.url_edit.text().strip()
+    def _add_download(self, *_signal_args, url=None, headers=None, cookies=None, filename=None):
+        """Start a download: from the URL box, or *url* (with what a browser sent along).
+        Returns the new DownloadItem, or None."""
+        from_box = url is None
+        if from_box:
+            url = self.url_edit.text().strip()
         # Also accept a dropped .torrent file path pasted with file:// prefix.
         if url.startswith('file://'):
             try:
                 from urllib.parse import unquote as _uq
                 from urllib.request import url2pathname as _u2p
                 url = _u2p(_uq(url[7:]))
-                self.url_edit.setText(url)
+                if from_box:
+                    self.url_edit.setText(url)
             except Exception:
                 pass
         if not url:
@@ -649,12 +715,21 @@ class DownloadWindow(QMainWindow):
             self.statusBar().showMessage(f'Cannot create folder: {exc}', 5000)
             return
 
-        name = self._unique_name(url, dest_path)
+        # A browser may send the name it chose (Content-Disposition, "Save as"), even a full path.
+        stem = None
+        if filename and not _is_torrent_input(url):
+            chosen = Path(filename)
+            if chosen.is_absolute() and chosen.parent.is_dir():
+                dest_path = chosen.parent
+            stem = _safe_filename(chosen.name)
+        name = self._unique_name(url, dest_path, stem)
         try:
             conns = int(self.conn_spin.value())
         except Exception:
             conns = 32
         item = DownloadItem(name, url, dest_path, conns)
+        item.headers = dict(headers or {})
+        item.cookies = list(cookies or [])
         try:
             item.db_id = self.store.insert(
                 url, dest_path, name, conns, status='Queued')
@@ -662,10 +737,12 @@ class DownloadWindow(QMainWindow):
             item.db_id = None  # non-fatal: in-memory mode if DB fails
         self._items.append(item)
         self._make_row(item)
-        self.url_edit.clear()
+        if from_box:
+            self.url_edit.clear()
         self._launch_worker(item)
+        return item
 
-    def _unique_name(self, url, dest):
+    def _unique_name(self, url, dest, stem=None):
         # Torrents resolve their real name from metadata; use a display name.
         if _is_torrent_input(url):
             base = torrent_downloader.magnet_name(url)
@@ -676,8 +753,9 @@ class DownloadWindow(QMainWindow):
             while (Path(dest) / f'{base} ({i})').exists():
                 i += 1
             return f'{base} ({i})'
-        base = url.split('?', 1)[0].rstrip('/')
-        stem = _safe_filename(os.path.basename(base))
+        if not stem:
+            base = url.split('?', 1)[0].rstrip('/')
+            stem = _safe_filename(os.path.basename(base))
         cand = Path(dest) / stem
         if not cand.exists():
             return stem
@@ -716,7 +794,8 @@ class DownloadWindow(QMainWindow):
         return lab
 
     def _launch_worker(self, item):
-        worker = DownloadWorker(item.url, item.dest, item.name, item.connections)
+        worker = DownloadWorker(item.url, item.dest, item.name, item.connections,
+                                item.headers, item.cookies)
         # Resume from already-downloaded bytes shown in the row (DB value).
         try:
             worker._current = int(item.downloaded or 0)
@@ -779,6 +858,9 @@ class DownloadWindow(QMainWindow):
                               total=item.downloaded, downloaded=item.downloaded)
         self._refresh(item)
         self.statusBar().showMessage(f'Finished: {name}', 5000)
+        if item.update_sha256:
+            self._run_update_installer(item)
+            return
         if _open_in_package_installer(item.file_path):
             self.statusBar().showMessage(f'Finished: {name}. Opening the installer...', 8000)
 
@@ -1114,7 +1196,160 @@ class DownloadWindow(QMainWindow):
             'libtorrent (BSD), requests (Apache 2.0) and tqdm (MIT/MPL-2.0). '
             'See THIRD_PARTY_NOTICES for details.</p>'
             '<p><b>Privacy:</b> the app collects no personal data and sends '
-            'nothing to Macra Systems. See PRIVACY.md for details.</p>'))
+            'nothing to Macra Systems. Once a day it asks GitHub whether a newer '
+            'version exists (Help menu: turn off). See PRIVACY.md for details.</p>'))
+
+
+    # ----- browser hand-off ------------------------------------------------
+    def _on_handoff(self, req):
+        if req.get('action') == 'download':
+            headers = {}
+            if req.get('referrer'):
+                headers['Referer'] = req['referrer']
+            if req.get('user_agent'):
+                headers['User-Agent'] = req['user_agent']
+            item = self._add_download(url=req['url'], headers=headers,
+                                      cookies=req.get('cookies'), filename=req.get('filename'))
+            if item is not None:
+                self.statusBar().showMessage(f'From your browser: {item.name}', 5000)
+        if self.isMinimized():
+            self.showNormal()
+        self.show()
+        self.raise_()
+        self.activateWindow()
+
+    def _browser_integration(self):
+        if sys.platform.startswith('linux') and browser_setup.system_registered():
+            note = 'The browser helper is set up for everyone on this computer.'
+        else:
+            try:
+                done = browser_setup.register_user()
+                note = ('The browser helper is set up for: ' + ', '.join(done) + '.') if done \
+                    else 'No supported browser was found for this user.'
+            except OSError as exc:
+                note = f'Could not set up the browser helper: {exc}'
+        box = QMessageBox(self)
+        box.setWindowTitle('Browser Integration')
+        box.setIcon(QMessageBox.Information)
+        box.setText(
+            f'<p>{note}</p>'
+            '<p>To send your downloads here, add the <b>Macra Downloader</b> extension to your '
+            'browser (Chrome, Edge, Brave, Chromium or Firefox). Downloads you start in the '
+            "browser then open here, with the site's login, and the browser's own copy is "
+            "cancelled. Click the extension's button to turn this off.</p>"
+            '<p>Downloads from private/incognito windows stay in the browser.</p>')
+        get = box.addButton('Get the Extension', QMessageBox.ActionRole)
+        box.addButton(QMessageBox.Close)
+        box.exec()
+        if box.clickedButton() is get:
+            QDesktopServices.openUrl(QUrl(EXTENSION_PAGE))
+
+    # ----- update check ----------------------------------------------------
+    def _toggle_auto_update(self, on):
+        settings = update_check.load_settings()
+        settings['check_updates'] = bool(on)
+        update_check.save_settings(settings)
+
+    def _check_updates(self, manual):
+        settings = update_check.load_settings()
+        if not manual and not update_check.due(settings):
+            return
+        settings['last_update_check'] = time.time()
+        update_check.save_settings(settings)
+
+        def work():
+            try:
+                info = update_check.fetch_latest(APP_VERSION)
+            except Exception as exc:  # noqa: BLE001 - offline, rate limit, ...
+                if manual:
+                    self._bridge.update_none.emit(f'Could not check for updates: {exc}')
+                return
+            skipped = update_check.load_settings().get('skipped_version')
+            if update_check.is_newer(info['version'], APP_VERSION) and (manual or info['version'] != skipped):
+                self._bridge.update_found.emit(info, manual)
+            elif manual:
+                self._bridge.update_none.emit(f'{APP_NAME} {APP_VERSION} is the newest version.')
+        threading.Thread(target=work, daemon=True).start()
+
+    def _on_update_none(self, text):
+        QMessageBox.information(self, 'Check for Updates', text)
+
+    def _on_update_found(self, info, manual):
+        self._update_info = info
+        self.update_btn.setText(f'Update available: {info["version"]}')
+        self.update_btn.show()
+        self.statusBar().showMessage(f'{APP_NAME} {info["version"]} is available.', 8000)
+        if manual:
+            self._offer_update()
+
+    def _offer_update(self):
+        info = self._update_info
+        if not info:
+            return
+        windows_installer = bool(sys.platform == 'win32' and getattr(sys, 'frozen', False)
+                                 and info['assets'].get(update_check.WINDOWS_ASSET)
+                                 and info['assets'].get(update_check.SUMS_ASSET))
+        box = QMessageBox(self)
+        box.setWindowTitle('Update Available')
+        box.setIcon(QMessageBox.Information)
+        text = f'<p><b>{APP_NAME} {info["version"]}</b> is available. You have {APP_VERSION}.</p>'
+        if str(Path(__file__).resolve()).startswith('/usr/lib/macraos/'):
+            text += '<p>This copy came with MacraOS, which installs its updates through MacraOS Updates.</p>'
+        box.setText(text)
+        install = box.addButton('Download and Install', QMessageBox.AcceptRole) if windows_installer else None
+        page = box.addButton("What's New" if windows_installer else 'Open Download Page',
+                             QMessageBox.ActionRole)
+        skip = box.addButton('Skip This Version', QMessageBox.DestructiveRole)
+        box.addButton('Later', QMessageBox.RejectRole)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is page:
+            QDesktopServices.openUrl(QUrl(info['page']))
+        elif clicked is skip:
+            settings = update_check.load_settings()
+            settings['skipped_version'] = info['version']
+            update_check.save_settings(settings)
+            self.update_btn.hide()
+        elif install is not None and clicked is install:
+            self._download_update(info)
+
+    def _download_update(self, info):
+        """Windows: fetch the installer with this app, check it against SHA256SUMS.txt, then run it."""
+        try:
+            import requests
+            sums = requests.get(info['assets'][update_check.SUMS_ASSET], timeout=30)
+            sums.raise_for_status()
+            expected = update_check.expected_sha256(sums.text, update_check.WINDOWS_ASSET)
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, 'Update', f'Could not download the update: {exc}')
+            return
+        if not expected:
+            QMessageBox.warning(self, 'Update', 'The release has no checksum for the installer.')
+            return
+        item = self._add_download(url=info['assets'][update_check.WINDOWS_ASSET],
+                                  filename=f'MacraDownloader-Setup-{info["version"]}.exe')
+        if item is not None:
+            item.update_sha256 = expected
+            self.update_btn.hide()
+
+    def _run_update_installer(self, item):
+        path = item.file_path
+        try:
+            ok = update_check.sha256_file(path) == item.update_sha256
+        except OSError:
+            ok = False
+        if not ok:
+            try:
+                path.unlink()
+            except OSError:
+                pass
+            QMessageBox.warning(self, 'Update', 'The downloaded installer is damaged or not genuine, '
+                                'so it was deleted. Please try again later.')
+            return
+        try:
+            os.startfile(str(path))          # Windows only; the installer closes this app itself
+        except (AttributeError, OSError) as exc:
+            QMessageBox.warning(self, 'Update', f'Could not start the installer: {exc}')
 
     def closeEvent(self, event):
         # Mark anything still downloading as interrupted (not lost): it will
@@ -1140,6 +1375,8 @@ class DownloadWindow(QMainWindow):
                                           total=item.total)
                 except Exception:
                     pass
+        if self._handoff is not None:
+            self._handoff.stop()
         try:
             self.store.close()
         except Exception:
@@ -1431,8 +1668,24 @@ def _looks_like_url(text: str) -> bool:
     return False
 
 
+def _forward_to_running(argv):
+    """If a Macra Downloader window is already open, give it this launch's links
+    (or just bring it forward) and return True."""
+    urls = [a.strip().strip('"').strip("'") for a in argv[1:]]
+    urls = [u for u in urls if _looks_like_url(u)]
+    if not urls:
+        return browser_handoff.send({'action': 'show'})[0]
+    for i, url in enumerate(urls):
+        if url.lower().endswith('.torrent') and not url.lower().startswith(('http://', 'https://')):
+            url = os.path.abspath(url)
+        if not browser_handoff.send({'action': 'download', 'url': url})[0]:
+            return i > 0        # nothing running: start normally (it takes argv[1] itself)
+    return True
+
+
 def main():
-    import sys
+    if _forward_to_running(sys.argv):
+        return
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     app.setApplicationVersion(APP_VERSION)

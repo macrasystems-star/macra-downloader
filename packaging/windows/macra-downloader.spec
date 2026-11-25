@@ -23,7 +23,7 @@ datas = [
 ]
 binaries = []
 hiddenimports = ['download_manager', 'media_downloader',
-                 'torrent_downloader', 'download_store']
+                 'torrent_downloader', 'download_store', 'browser_handoff', 'browser_setup', 'update_check', 'native_host']
 
 d, b, h = collect_all('yt_dlp')
 datas += d; binaries += b; hiddenimports += h
@@ -76,10 +76,37 @@ exe = EXE(
     disable_windowed_traceback=False,
 )
 
+# The browser helper: a small console program (browsers talk to it over stdin/stdout).
+# Standard library only, so it starts fast.
+host_a = Analysis(
+    [os.path.join(ROOT, 'native_host.py')],
+    pathex=[ROOT],
+    hiddenimports=['browser_handoff'],
+    excludes=['tkinter', 'PySide6', 'shiboken6', 'yt_dlp', 'libtorrent', 'requests'],
+    noarchive=False,
+    optimize=0,
+)
+host_exe = EXE(
+    PYZ(host_a.pure),
+    host_a.scripts,
+    [],
+    exclude_binaries=True,
+    name='MacraDownloaderHost',
+    icon=os.path.join(ROOT, 'assets', 'icon.ico'),
+    version=os.path.join(SPECPATH, 'version_info.txt'),
+    debug=False,
+    strip=False,
+    upx=False,
+    console=True,       # browsers start it without a window
+)
+
 coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
+    host_exe,
+    host_a.binaries,
+    host_a.datas,
     strip=False,
     upx=False,
     name='MacraDownloader',

@@ -159,12 +159,64 @@ launcher in your app menu, and adds the `download-manager` command to PATH.
 2. **Command-line / .desktop hook** — the app accepts one URL argument:
    `download-manager "<URL-or-magnet>"`, so any browser extension or
    script can hand links to it.
-3. **Full browser interception** needs a small browser extension,
-   because browsers sandbox pages and won't let a desktop app sniff every
-   link. Use any "open in external download manager" extension pointed at
-   `download-manager "%U"`. The desktop file already advertises
+3. **Browsers** — see [Browser integration](#browser-integration) below.
+   The desktop file also advertises
    `MimeType=application/x-bittorrent;x-scheme-handler/magnet;` so magnets
    and .torrent files open in the app once installed.
+
+Only one Macra Downloader window runs at a time: starting it again (or
+handing it a link) brings the open window forward and adds the link there.
+
+## Browser integration
+
+The **Macra Downloader extension** (folder `browser_extension/`, one copy for
+Chrome, Edge, Brave, Chromium and Firefox 128+) sends the downloads you start
+in the browser to Macra Downloader, together with the site's cookies, the
+referring page and the browser's user agent, so downloads behind a login keep
+working. The browser's own copy is cancelled. It also adds *Download with Macra
+Downloader* to the right-click menu of links.
+
+- Click the extension's toolbar button to turn the hand-over off (badge *off*)
+  or on again.
+- Downloads from private / incognito windows always stay in the browser.
+- If Macra Downloader cannot take a download (not installed, helper not set
+  up), the browser downloads it as usual and the button shows a red **!**.
+
+The extension talks to a small helper, `native_host.py`
+(`MacraDownloaderHost.exe` on Windows), that browsers start through "native
+messaging". The helper only answers this extension and passes the request to
+the Macra Downloader window over a local connection protected by a per-user
+secret; it starts the window if it is not open.
+
+**Setting it up**
+
+- **Windows:** the installer registers the helper for Chrome, Edge, Brave,
+  Chromium and Firefox. Add the extension from your browser's add-on store.
+- **MacraOS:** everything is preinstalled; Brave, Chrome and Chromium get the
+  extension automatically (they then show *Managed by your organization*).
+  Macra Browser hands its downloads over by itself (menu: *Send downloads to
+  Macra Downloader*).
+- **Other Linux / running from source:** *Help → Browser Integration...*
+  registers the helper for the browsers it finds in your home folder. To try
+  the extension before it is in a store, load `browser_extension/` with
+  *Load unpacked* (Chrome/Edge/Brave, Developer mode) or
+  *about:debugging → Load Temporary Add-on* (Firefox).
+
+The store package (without the developer `key` field) is attached to each
+release as `macra-downloader-extension-<version>.zip`
+(`python3 tools/package_extension.py OUT.zip`). After publishing in the Chrome
+Web Store or Edge Add-ons, add the store's extension ID to
+`CHROMIUM_EXTENSION_IDS` in `browser_setup.py` and regenerate the Windows
+manifests (the tests check they match).
+
+## Updates
+
+Once a day the app asks GitHub whether a newer release exists (turn it off in
+*Help → Check for Updates Automatically*). If there is one, an *Update
+available* button appears in the status bar. On Windows it can download the
+installer, check it against the release's `SHA256SUMS.txt` and start it;
+elsewhere it opens the download page. Copies that came with MacraOS are
+updated by MacraOS.
 
 ## Building releases
 

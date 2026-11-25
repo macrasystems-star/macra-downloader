@@ -1,6 +1,6 @@
 # Macra Downloader privacy policy
 
-Effective date: 6 November 2026
+Effective date: 25 November 2026
 
 Macra Downloader is a free, open-source download manager published by Macra
 Systems. This policy explains what happens to your information when you use
@@ -10,8 +10,29 @@ personal data from the app.**
 ## What Macra Systems collects
 
 Nothing. The app has no accounts, no analytics, no usage statistics, no crash
-reporting, no advertising and no automatic update check. It never sends
-information to Macra Systems. You can confirm this in the published source code.
+reporting and no advertising. It never sends information to Macra Systems. You
+can confirm this in the published source code.
+
+## Update check
+
+Once a day the app asks GitHub's public API whether a newer version has been
+released. GitHub receives the request like any visit (your IP address, and the
+app's name and version in the request) under the
+[GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement).
+Nothing about you or your downloads is included. You can turn this off in
+*Help → Check for Updates Automatically*.
+
+## Browser extension
+
+The optional Macra Downloader browser extension sends each download you start
+in your browser to the Macra Downloader app on the same computer: the link, the
+file name, the page you came from, your browser's user agent and the site's
+cookies for that link (so downloads that need you to be logged in work). This
+goes only to the app on your computer, through your browser's "native messaging"
+helper, and is never sent to Macra Systems or anyone else. The cookies are kept
+in memory while the download runs and are not saved in the download history.
+Downloads from private or incognito windows are never sent. The extension stores
+only one setting (whether the hand-over is on) in your browser.
 
 ## What stays on your computer
 
@@ -21,6 +42,9 @@ the file name, the destination folder, its size, its progress and its status.
 
 - Windows: `%LOCALAPPDATA%\MacraDownloader\downloads.db`
 - Linux: `~/.local/share/download_manager/downloads.db`
+
+It also keeps a small settings file next to it (`settings.json`: whether to
+check for updates, when it last checked, and a version you chose to skip).
 
 This file never leaves your computer. You can delete individual entries in the
 app, or delete the file to erase the whole history. Uninstalling the app on

@@ -44,10 +44,24 @@ jobs:
       - name: Run tests
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python -m unittest test_download_manager test_gui_signals -v
+        run: python -m unittest test_download_manager test_gui_signals test_browser_integration -v
 
       - name: Build app (PyInstaller)
         run: pyinstaller --noconfirm --clean packaging\windows\macra-downloader.spec
+
+      - name: Check the browser helper
+        shell: python
+        run: |
+          # Talk to MacraDownloaderHost.exe the way a browser does (4-byte length + JSON).
+          import json, struct, subprocess
+          msg = json.dumps({'type': 'ping'}).encode()
+          out = subprocess.run([r'dist\MacraDownloader\MacraDownloaderHost.exe',
+                                'chrome-extension://oanikjbpkabmkhpllihbcibckeigmjnl/'],
+                               input=struct.pack('=I', len(msg)) + msg, capture_output=True, timeout=60).stdout
+          (n,) = struct.unpack('=I', out[:4])
+          reply = json.loads(out[4:4 + n])
+          print(reply)
+          assert reply.get('ok') is True, reply
 
       - name: Install Inno Setup
         shell: pwsh
@@ -85,17 +99,24 @@ jobs:
       - name: Run tests
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python -m unittest test_download_manager test_gui_signals -v
+        run: python -m unittest test_download_manager test_gui_signals test_browser_integration -v
 
       - name: Build app (PyInstaller)
         run: |
           pyinstaller --noconfirm --clean download-manager.spec
           mv dist/download-manager dist/macra-downloader-linux-x64
 
+      - name: Package the browser extension (for the Chrome, Edge and Firefox stores)
+        run: |
+          v=$(sed -n "s/^APP_VERSION = '\(.*\)'/\1/p" download_manager_gui.py)
+          python tools/package_extension.py "dist/macra-downloader-extension-$v.zip"
+
       - uses: actions/upload-artifact@v4
         with:
           name: linux
-          path: dist/macra-downloader-linux-x64
+          path: |
+            dist/macra-downloader-linux-x64
+            dist/macra-downloader-extension-*.zip
           if-no-files-found: error
 
   publish:
@@ -121,4 +142,5 @@ jobs:
           files: |
             out/MacraDownloader-Setup-x64.exe
             out/macra-downloader-linux-x64
+            out/macra-downloader-extension-*.zip
             out/SHA256SUMS.txt

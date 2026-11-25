@@ -1,0 +1,9 @@
+{
+  "name": "com.macrasystems.downloader",
+  "description": "Macra Downloader browser helper",
+  "path": "MacraDownloaderHost.exe",
+  "type": "stdio",
+  "allowed_extensions": [
+    "downloader@macrasystems.com"
+  ]
+}
