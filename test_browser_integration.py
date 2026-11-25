@@ -236,10 +236,20 @@ class WindowHandoffTest(unittest.TestCase):
     """A browser request reaches a real window and downloads with the browser's cookies and file name."""
 
     def test_window_receives_download(self):
+        from PySide6.QtCore import QCoreApplication
         from PySide6.QtWidgets import QApplication
+        existing = QCoreApplication.instance()
+        if existing is not None and not isinstance(existing, QApplication):
+            # Another test module made a plain QCoreApplication in this process (there can be only
+            # one), and windows need a QApplication: run this test in a fresh process instead.
+            r = subprocess.run([sys.executable, '-m', 'unittest', '-v',
+                                'test_browser_integration.WindowHandoffTest.test_window_receives_download'],
+                               cwd=HERE, capture_output=True, text=True, timeout=120)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            return
         import download_store
         import download_manager_gui as gui
-        app = QApplication.instance() or QApplication([])
+        app = existing or QApplication([])
         srv = _server()
         tmp = tempfile.TemporaryDirectory()
         old = (download_store.DB_PATH, update_check.SETTINGS_FILE, os.environ.get('MACRA_DOWNLOADER_HANDOFF'))
